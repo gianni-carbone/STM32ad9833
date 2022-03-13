@@ -1,3 +1,5 @@
+//#define NANO_FLOAT_PRINTF // uncoment if use newlib nano + float printf
+
 // ******************************************************************************** / 
 // check a string is positive integer number
 // ******************************************************************************** / 
@@ -98,9 +100,21 @@ bool str_pull(String s, uint8_t pos, float* ret, char dlm = ' '){
   return true;
 }
 
+
+
+// ******************************************************************************** / 
+// version command
+// ******************************************************************************** / 
+bool cmd_VER(String args){
+  Serial.printf("Library version is %lu\n", dds.version());
+  return true;
+}
+
+
 // ******************************************************************************** / 
 // frequency command
 // ******************************************************************************** / 
+#ifdef NANO_FLOAT_PRINTF
 bool cmd_FREQ(String args){
   float freq;
   if (!str_pull(args, 0, &freq)) {
@@ -115,9 +129,28 @@ bool cmd_FREQ(String args){
     }
   }
   st.frequency = freq;
-  dds.setFrequency(0, st.frequency);
+  dds.setFrequency(st.frequency);
   return true;
 }
+#else
+bool cmd_FREQ(String args){
+  uint32_t freq;
+  if (!str_pull(args, 0, &freq)) {
+    Serial.printf("FREQ error: not numeric value!\n");
+    return false;
+  } else {
+    if ((freq>12500000) || (freq<=0)) {
+      Serial.printf("FREQ error: frequency must be >0 and <12.500.000 Hz!\n");
+      return false;
+    } else {
+      Serial.printf("FREQ: %lu Hz\n", freq);     
+    }
+  }
+  st.frequency = (float)freq;
+  dds.setFrequency(st.frequency);
+  return true;
+}
+#endif
 
 // ******************************************************************************** / 
 // phase command
@@ -136,7 +169,7 @@ bool cmd_PHASE(String args){
     }
   }
   st.phase = phase;
-  dds.setPhase(0, (float)st.phase/10.0);
+  dds.setPhase((float)st.phase/10.0);
   return true;
 }
 
@@ -191,6 +224,7 @@ bool cmd_MCLOCK(String args){
 // ******************************************************************************** / 
 bool cmd_HELP(String args){
   Serial.printf("HELP    this help\n");
+  Serial.printf("VER     return library version number\n");
   Serial.printf("FREQ    set frequency. Usage FREQ <Hz>\n");
   Serial.printf("PHASE   set phase. Usage PHASE <tenth of degs>\n");
   Serial.printf("SHAPE   set waveform. Usage SHAPE <off|sine|square|triangle|square2>\n");
@@ -207,7 +241,8 @@ void parseCmd(){
   bool ret = false;
 
   if      (cmd==String("HELP"))     ret = cmd_HELP(args);        
-  else if (cmd==String("FREQ"))     ret = cmd_FREQ(args);         // COMMON commands
+  else if (cmd==String("VER"))      ret = cmd_VER(args);         
+  else if (cmd==String("FREQ"))     ret = cmd_FREQ(args);        
   else if (cmd==String("PHASE"))    ret = cmd_PHASE(args);
   else if (cmd==String("SHAPE"))    ret = cmd_SHAPE(args);
   else if (cmd==String("MCLOCK"))   ret = cmd_MCLOCK(args);

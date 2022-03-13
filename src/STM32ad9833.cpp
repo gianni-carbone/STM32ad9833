@@ -47,8 +47,12 @@
 #endif
 
 
-STM32ad9833::STM32ad9833(uint32_t _sfy_pin, SPI_TypeDef* SPIinstance, bool initSPI){
-	
+#ifdef USE_HAL_SPI		
+STM32ad9833::STM32ad9833(uint32_t _sfy_pin, SPI_TypeDef* SPIinstance, bool initSPI)
+#else
+STM32ad9833::STM32ad9833(uint32_t _sfy_pin, bool initSPI)	
+#endif
+{
 	st.sfyPin = _sfy_pin;
 	
 	if (initSPI) {
@@ -72,11 +76,15 @@ STM32ad9833::STM32ad9833(uint32_t _sfy_pin, SPI_TypeDef* SPIinstance, bool initS
 	reset(true);		// keeep chip resetted
 }
 
+uint32_t STM32ad9833::version(void) {
+	return STM32ad9833_VER;
+}
+
 void STM32ad9833::masterClock(uint32_t _ck) {
 	st.masterClock = _ck;
 }
 
-bool STM32ad9833::setFrequency(float freq, uint8_t chan) {
+bool STM32ad9833::setFrequency(float freq, uint8_t reg) {
 	// Bluepill @72MHz
 	// takes aprox 14uS SPI@36 MHz with USE_HAL_SPI and USE_HAL_GPIO enabled
 	// takes aprox 117uS SPI@36 MHz with USE_HAL_SPI and USE_HAL_GPIO disabled
@@ -85,38 +93,38 @@ bool STM32ad9833::setFrequency(float freq, uint8_t chan) {
 	uint16_t  f_sel;
 
 	if (freq>((float)st.masterClock/2.0)) return false;
-	if (chan>1) return false;
+	if (reg>1) return false;
 
-	st.freq[chan] = freq;
-	st.regFreq[chan] = (uint32_t)((freq * AD_2POW28/st.masterClock) + 0.5);
+	st.freq[reg] = freq;
+	st.regFreq[reg] = (uint32_t)((freq * AD_2POW28/st.masterClock) + 0.5);
 	
-	switch (chan) {
+	switch (reg) {
 		case 0:  f_sel = SEL_FREQ0; break;
 		case 1:  f_sel = SEL_FREQ1; break;
 	}
 	
 	spi_send(st.regCtl);   // set B28 to send both
-	spi_send(f_sel | (uint16_t)(st.regFreq[chan] & 0x3fff));
-	spi_send(f_sel | (uint16_t)((st.regFreq[chan] >> 14) & 0x3fff));
+	spi_send(f_sel | (uint16_t)(st.regFreq[reg] & 0x3fff));
+	spi_send(f_sel | (uint16_t)((st.regFreq[reg] >> 14) & 0x3fff));
 	
 	return true;
 }
 
-bool STM32ad9833::setPhase(uint16_t phase, uint8_t chan) {
+bool STM32ad9833::setPhase(uint16_t phase, uint8_t reg) {
 	uint16_t  ph_sel;
 
-	if (chan>1) return false;
+	if (reg>1) return false;
 	// TODO: check on phase value?
 
-	st.phase[chan] = phase;
-	st.regPhase[chan] = (uint16_t)((512.0 * (phase/10) / 45) + 0.5);
+	st.phase[reg] = phase;
+	st.regPhase[reg] = (uint16_t)((512.0 * (phase/10) / 45) + 0.5);
 
-	switch (chan) {
+	switch (reg) {
 		case 0:  ph_sel = SEL_PHASE0; break;
 		case 1:  ph_sel = SEL_PHASE1; break;
 	}
 
-	spi_send(ph_sel | (0xfff & st.regPhase[chan]));
+	spi_send(ph_sel | (0xfff & st.regPhase[reg]));
 
 	return true;
 }
@@ -124,65 +132,65 @@ bool STM32ad9833::setPhase(uint16_t phase, uint8_t chan) {
 
 void STM32ad9833::setShape(shape_t _shape){
  
-  switch (_shape) {
-    case AD_OFF:
-      bitClear(st.regCtl, AD_OPBITEN);
-      bitClear(st.regCtl, AD_MODE);
-      bitSet(st.regCtl, AD_SLEEP1);
-      bitSet(st.regCtl, AD_SLEEP12);
-    break;
-    case AD_SINE:
-      bitClear(st.regCtl, AD_OPBITEN);
-      bitClear(st.regCtl, AD_MODE);
-      bitClear(st.regCtl, AD_SLEEP1);
-      bitClear(st.regCtl, AD_SLEEP12);
-    break;
-    case AD_SQUARE:
-      bitSet(st.regCtl, AD_OPBITEN);
-      bitClear(st.regCtl, AD_MODE);
-      bitSet(st.regCtl, AD_DIV2);
-      bitClear(st.regCtl, AD_SLEEP1);
-      bitClear(st.regCtl, AD_SLEEP12);
-    break;
-    case AD_SQUARE2:
-      bitSet(st.regCtl, AD_OPBITEN);
-      bitClear(st.regCtl, AD_MODE);
-      bitClear(st.regCtl, AD_DIV2);
-      bitClear(st.regCtl, AD_SLEEP1);
-      bitClear(st.regCtl, AD_SLEEP12);
-    break;
-    case AD_TRIANGLE:
-      bitClear(st.regCtl, AD_OPBITEN);
-      bitSet(st.regCtl, AD_MODE);
-      bitClear(st.regCtl, AD_SLEEP1);
-      bitClear(st.regCtl, AD_SLEEP12);
-    break;
-  }
+	switch (_shape) {
+	case AD_OFF:
+	  bitClear(st.regCtl, AD_OPBITEN);
+	  bitClear(st.regCtl, AD_MODE);
+	  bitSet(st.regCtl, AD_SLEEP1);
+	  bitSet(st.regCtl, AD_SLEEP12);
+	break;
+	case AD_SINE:
+	  bitClear(st.regCtl, AD_OPBITEN);
+	  bitClear(st.regCtl, AD_MODE);
+	  bitClear(st.regCtl, AD_SLEEP1);
+	  bitClear(st.regCtl, AD_SLEEP12);
+	break;
+	case AD_SQUARE:
+	  bitSet(st.regCtl, AD_OPBITEN);
+	  bitClear(st.regCtl, AD_MODE);
+	  bitSet(st.regCtl, AD_DIV2);
+	  bitClear(st.regCtl, AD_SLEEP1);
+	  bitClear(st.regCtl, AD_SLEEP12);
+	break;
+	case AD_SQUARE2:
+	  bitSet(st.regCtl, AD_OPBITEN);
+	  bitClear(st.regCtl, AD_MODE);
+	  bitClear(st.regCtl, AD_DIV2);
+	  bitClear(st.regCtl, AD_SLEEP1);
+	  bitClear(st.regCtl, AD_SLEEP12);
+	break;
+	case AD_TRIANGLE:
+	  bitClear(st.regCtl, AD_OPBITEN);
+	  bitSet(st.regCtl, AD_MODE);
+	  bitClear(st.regCtl, AD_SLEEP1);
+	  bitClear(st.regCtl, AD_SLEEP12);
+	break;
+	}
 
-  spi_send(st.regCtl);
-
+	spi_send(st.regCtl);
+	st.shape = _shape;
 }
 
-bool STM32ad9833::frequencyChannel(uint8_t chan) {
-	if (chan>1) return false;
+bool STM32ad9833::freqRegister(uint8_t reg) {
+	if (reg>1) return false;
 
-	switch (chan) {
+	switch (reg) {
 		case 0: bitClear(st.regCtl, AD_FSELECT); break;
 		case 1: bitSet(st.regCtl, AD_FSELECT);   break;
 	}
 	spi_send(st.regCtl);
-	st.frequencyChannel =  chan;
+	st.freqRegister =  reg;
 	return true;
 }
 
-bool STM32ad9833::phaseChannel(uint8_t chan){
-	if (chan>1) return false;
-	switch (chan) {
+bool STM32ad9833::phaseRegister(uint8_t reg){
+	if (reg>1) return false;
+	switch (reg) {
 		case 0: bitClear(st.regCtl, AD_PSELECT); break;
 		case 1: bitSet(st.regCtl, AD_PSELECT);   break;
 	}
 	spi_send(st.regCtl);
-	st.phaseChannel = chan;
+	st.phaseRegister = reg;
 	return true;
 }
 
@@ -196,7 +204,7 @@ void STM32ad9833::reset(bool _hold) {
 	}
 }
 
-bool STM32ad9833::begin(shape_t shape, float freq, uint16_t phase, uint8_t chan) {
+bool STM32ad9833::begin(shape_t shape, float freq, uint16_t phase, uint8_t reg) {
 	sfy_set();
 	
 	bitSet(st.regCtl, AD_B28); 
@@ -207,10 +215,9 @@ bool STM32ad9833::begin(shape_t shape, float freq, uint16_t phase, uint8_t chan)
 	if (!setPhase(phase, 0)) return false;
 	if (!setPhase(phase, 1)) return false;
 	setShape(shape);
-	frequencyChannel(chan);
-	phaseChannel(chan);
+	freqRegister(reg);
+	phaseRegister(reg);
 	reset();                  				// full transition	
-		
 	return true;
 }
 

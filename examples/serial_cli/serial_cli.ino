@@ -7,12 +7,6 @@
 //  VCC       +3.3v
 // ************************************************* 
 
-#define USE_HAL_GPIO  // this one enable the fast SFY pin toggle. Suggestion: stay it enabled
-#define USE_HAL_SPI   // this one enables the fastest SPI write. 
-                      // Suggestion: if the spi interface is for the exclusive use of the module then stay it enabled.
-                      // If you have to share the spi interface with other slaves with different settings than MODE2
-                      // then comment the line and use spi transactions.
-
 #include "STM32ad9833.h"
 
 typedef struct {
@@ -31,7 +25,7 @@ STM32ad9833       dds(SFY_PIN);      // ad9833 driver
 
 void setup() {
   Serial.begin(115200);
-  dds.begin(st.frequency, st.phase, st.shape, st.channel);
+  dds.begin(st.shape, st.frequency, st.phase, st.channel);
 }
 
 
