@@ -9,7 +9,7 @@
 #include <Arduino.h>
 #include "stm32yyxx_hal_conf.h"
 
-#define STM32ad9833_VER	901
+#define STM32ad9833_VER	902
 
 
 #define AD_MCLK   	25000000UL    // default clock speed of the AD9833 reference clock in Hz
@@ -41,7 +41,6 @@ enum shape_t {
 typedef struct {
 	uint32_t		masterClock = AD_MCLK;
 	uint32_t		sfyPin = 0;
-
 
 	uint16_t  		regCtl = 0;     	// control register image	
 	uint32_t  		regFreq[2];     	// frequency registers

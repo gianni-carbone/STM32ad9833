@@ -85,7 +85,7 @@ void STM32ad9833::masterClock(uint32_t _ck) {
 }
 
 bool STM32ad9833::setFrequency(float freq, uint8_t reg) {
-	// Bluepill @72MHz
+	// Bluepill @72MHz (SPI1: SPI_BAUDRATEPRESCALER_2)
 	// takes aprox 14uS SPI@36 MHz with USE_HAL_SPI and USE_HAL_GPIO enabled
 	// takes aprox 117uS SPI@36 MHz with USE_HAL_SPI and USE_HAL_GPIO disabled
 	// takes aprox 112uS SPI@36 MHz with USE_HAL_SPI enabled and USE_HAL_GPIO disabled
@@ -234,51 +234,19 @@ bool STM32ad9833::SPI_MspInit(){
 	// assuming PinMap_SPI_MISO, PinMap_SPI_MOSI and PinMap_SPI_SCLK same size
 	uint8_t i=0;
 	while (PinMap_SPI_MISO[i].pin != NC) {
-#ifdef SPI1
-		if (PinMap_SPI_MISO[i].peripheral == SPI1) {
+		
+		if (st.hspi.Instance == PinMap_SPI_MISO[i].peripheral) {
 			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_MISO[i].pin);
 			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_MISO[i].pin)), &GPIO_InitStruct);
+			set_GPIO_Port_Clock(STM_PORT(PinMap_SPI_MISO[i].pin));
 			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_MOSI[i].pin);
 			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_MOSI[i].pin)), &GPIO_InitStruct);
+			set_GPIO_Port_Clock(STM_PORT(PinMap_SPI_MOSI[i].pin));
 			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_SCLK[i].pin);
 			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_SCLK[i].pin)), &GPIO_InitStruct);
+			set_GPIO_Port_Clock(STM_PORT(PinMap_SPI_SCLK[i].pin));
 		}
-#endif
-#ifdef SPI2
-		else if (PinMap_SPI_MISO[i].peripheral == SPI2) {
-			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_MISO[i].pin);
-			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_MISO[i].pin)), &GPIO_InitStruct);
-			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_MOSI[i].pin);
-			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_MOSI[i].pin)), &GPIO_InitStruct);
-			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_SCLK[i].pin);
-			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_SCLK[i].pin)), &GPIO_InitStruct);
-		}
-#endif
-#ifdef SPI3
-		else if (PinMap_SPI_MISO[i].peripheral == SPI3) {
-			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_MISO[i].pin);
-			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_MISO[i].pin)), &GPIO_InitStruct);
-			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_MOSI[i].pin);
-			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_MOSI[i].pin)), &GPIO_InitStruct);
-			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_SCLK[i].pin);
-			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_SCLK[i].pin)), &GPIO_InitStruct);
-		}
-#endif
-#ifdef SPI4
-		else if (PinMap_SPI_MISO[i].peripheral == SPI3) {
-			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_MISO[i].pin);
-			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_MISO[i].pin)), &GPIO_InitStruct);
-			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_MOSI[i].pin);
-			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_MOSI[i].pin)), &GPIO_InitStruct);
-			GPIO_InitStruct.Pin = STM_GPIO_PIN(PinMap_SPI_SCLK[i].pin);
-			HAL_GPIO_Init(get_GPIO_Port(STM_PORT(PinMap_SPI_SCLK[i].pin)), &GPIO_InitStruct);
-		}
-#endif
-
-		set_GPIO_Port_Clock(STM_PORT(PinMap_SPI_MISO[i].pin));
-		set_GPIO_Port_Clock(STM_PORT(PinMap_SPI_MOSI[i].pin));
-		set_GPIO_Port_Clock(STM_PORT(PinMap_SPI_SCLK[i].pin));
-	i++;
+		i++;
 	}
 
 	return true;
@@ -306,7 +274,7 @@ bool STM32ad9833::SPI_Init(void){
 	st.hspi.Init.CLKPolarity = SPI_POLARITY_HIGH;				// SPI MODE2
 	st.hspi.Init.DataSize = SPI_DATASIZE_16BIT;					// always write 16 bit of data
 	st.hspi.Init.NSS = SPI_NSS_SOFT;
-	st.hspi.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;	// prescaler = 2 tested with STM32F103@72MHz
+	st.hspi.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;	// SPI1: prescaler = 2 tested with STM32F103@72MHz
 	st.hspi.Init.FirstBit = SPI_FIRSTBIT_MSB;
 	st.hspi.Init.TIMode = SPI_TIMODE_DISABLE;
 	st.hspi.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
